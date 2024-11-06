@@ -1,4 +1,4 @@
-/*	$NetBSD: background.c,v 1.27 2021/09/06 07:45:48 rin Exp $	*/
+/*	$NetBSD: background.c,v 1.25 2018/11/19 20:37:04 uwe Exp $	*/
 
 /*-
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
@@ -61,8 +61,10 @@ bkgd(chtype ch)
 void
 wbkgdset(WINDOW *win, chtype ch)
 {
+#ifdef DEBUG
 	__CTRACE(__CTRACE_ATTR, "wbkgdset: (%p), '%s', %08x\n",
 	    (void *)win, unctrl(ch & __CHARTEXT), ch & __ATTRIBUTES);
+#endif
 
 	/* Background character. */
 	if (ch & __CHARTEXT)
@@ -85,8 +87,10 @@ wbkgd(WINDOW *win, chtype ch)
 	chtype obch;
 	int y, x;
 
+#ifdef DEBUG
 	__CTRACE(__CTRACE_ATTR, "wbkgd: (%p), '%s', %08x\n",
 	    (void *)win, unctrl(ch & __CHARTEXT), ch & __ATTRIBUTES);
+#endif
 	obch = win->bch;
 	wbkgdset(win, ch);
 
@@ -157,8 +161,10 @@ wbkgrndset(WINDOW *win, const cchar_t *wch)
 	nschar_t *np, *tnp;
 	int i;
 
+#ifdef DEBUG
 	__CTRACE(__CTRACE_ATTR, "wbkgrndset: (%p), '%s', %x\n",
 		(void *)win, (const char *) wunctrl(wch), wch->attributes);
+#endif
 
 	/* ignore multi-column characters */
 	if (!wch->elements || wcwidth(wch->vals[0]) > 1)
@@ -217,8 +223,10 @@ wbkgrndset(WINDOW *win, const cchar_t *wch)
 int
 wbkgrnd(WINDOW *win, const cchar_t *wch)
 {
+#ifdef DEBUG
 	__CTRACE(__CTRACE_ATTR, "wbkgrnd: (%p), '%s', %x\n",
 		(void *)win, (const char *) wunctrl(wch), wch->attributes);
+#endif
 
 	/* ignore multi-column characters */
 	if (!wch->elements || wcwidth( wch->vals[ 0 ]) > 1)

@@ -1,4 +1,4 @@
-/*	$NetBSD: cr_put.c,v 1.37 2021/09/06 07:45:48 rin Exp $	*/
+/*	$NetBSD: cr_put.c,v 1.34 2019/05/20 22:17:41 blymn Exp $	*/
 
 /*
  * Copyright (c) 1981, 1993, 1994
@@ -64,9 +64,10 @@ static int outcol, outline, destcol, destline;
 int
 __mvcur(int ly, int lx, int y, int x, int in_refresh)
 {
+#ifdef DEBUG
 	__CTRACE(__CTRACE_OUTPUT,
-	    "mvcur: moving cursor from (%d, %d) to (%d, %d) in refresh %d\n",
-	    ly, lx, y, x, in_refresh);
+	    "mvcur: moving cursor from (%d, %d) to (%d, %d) in refresh %d\n", ly, lx, y, x, in_refresh);
+#endif
 	destcol = x;
 	destline = y;
 	outcol = lx;
@@ -81,10 +82,9 @@ fgoto(int in_refresh)
 	int	 c, l;
 	char	*cgp;
 
+#ifdef DEBUG
 	__CTRACE(__CTRACE_OUTPUT, "fgoto: in_refresh=%d\n", in_refresh);
-	__CTRACE(__CTRACE_OUTPUT,
-	    "fgoto: outcol=%d, outline=%d, destcol=%d, destline=%d\n",
-	    outcol, outline, destcol, destline);
+#endif /* DEBUG */
 	if (destcol >= COLS) {
 		destline += destcol / COLS;
 		destcol %= COLS;
@@ -161,7 +161,9 @@ fgoto(int in_refresh)
 		 * Need this condition due to inconsistent behavior
 		 * of backspace on the last column.
 		 */
+#ifdef DEBUG
 		__CTRACE(__CTRACE_OUTPUT, "fgoto: cgp=%s\n", cgp);
+#endif /* DEBUG */
 		if (outcol != COLS - 1 &&
 		    plod((int) strlen(cgp), in_refresh) > 0)
 			plod(0, in_refresh);
@@ -200,11 +202,10 @@ plod(int cnt, int in_refresh)
 {
 	int	 i, j, k, soutcol, soutline;
 
+#ifdef DEBUG
 	__CTRACE(__CTRACE_OUTPUT, "plod: cnt=%d, in_refresh=%d\n",
 	    cnt, in_refresh);
-	__CTRACE(__CTRACE_OUTPUT,
-	    "plod: plodding from col %d, row %d to col %d, row %d\n",
-	    outcol, outline, destcol, destline);
+#endif /* DEBUG */
 	plodcnt = plodflg = cnt;
 	soutcol = outcol;
 	soutline = outline;
@@ -321,7 +322,6 @@ plod(int cnt, int in_refresh)
 				plodput('\n');
 			outline++;
 		}
-
 		outcol = 0;
 	}
 dontcr:while (outline < destline) {
@@ -332,14 +332,7 @@ dontcr:while (outline < destline) {
 			plodput('\n');
 		if (plodcnt < 0)
 			goto out;
-		/*
-		 * If the terminal does a CR with NL or we are in
-		 * a mode where a \n will result in an implicit \r
-		 * then adjust the outcol to match iff we actually
-		 * emitted said \n.
-		 */
-		if ((__NONL || __pfast == 0) &&
-		    (!cursor_down || (*cursor_down == '\n')))
+		if (__NONL || __pfast == 0)
 			outcol = 0;
 	}
 #ifdef notdef
@@ -420,12 +413,14 @@ dontcr:while (outline < destline) {
 						__cursesi_putnsp(curscr->alines[outline]->line[outcol].nsp,
 								outline,
 								outcol);
+#ifdef DEBUG
 						__CTRACE(__CTRACE_OUTPUT,
 						    "plod: (%d,%d)WCOL(%d), "
 						    "putwchar(%x)\n",
 						    outline, outcol,
 						    WCOL(curscr->alines[outline]->line[outcol]),
 						    curscr->alines[outline]->line[outcol].ch);
+#endif /* DEBUG */
 					/*FALLTHROUGH*/
 					case 0:
 						break;
@@ -451,7 +446,9 @@ out:	if (plodflg) {
 		outcol = soutcol;
 		outline = soutline;
 	}
+#ifdef DEBUG
 	__CTRACE(__CTRACE_OUTPUT, "plod: returns %d\n", plodcnt);
+#endif /* DEBUG */
 	return plodcnt;
 }
 

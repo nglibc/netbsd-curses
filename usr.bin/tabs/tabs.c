@@ -1,4 +1,4 @@
-/* $NetBSD: tabs.c,v 1.6 2021/08/27 18:28:41 rillig Exp $ */
+/* $NetBSD: tabs.c,v 1.5 2019/02/01 08:29:04 mrg Exp $ */
 
 /*-
  * Copyright (c) 2008 The NetBSD Foundation, Inc.
@@ -35,7 +35,6 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,7 +82,6 @@ main(int argc, char **argv)
 	char *term, *arg, *token, *end, *tabs = NULL;
 	const char *cr, *spec = NULL;
 	int i, n, inc = 8, stops[NSTOPS], nstops, last, cols, margin = 0;
-	long num = 0;
 	size_t j;
 	struct winsize ws;
 
@@ -97,12 +95,10 @@ main(int argc, char **argv)
 				margin = 10;
 			else {
 				errno = 0;
-				num = strtol(arg, &end, 10);
-				if (errno != 0 || *end != '\0' ||
-				    num < 0 || num > INT_MAX)
+				margin = strtol(arg, &end, 10);
+				if (errno != 0 || *end != '\0' || margin < 0)
 					errx(EXIT_FAILURE,
 					     "%s: invalid margin", arg);
-				margin = (int)num;
 			}
 			continue;
 		}
@@ -124,10 +120,10 @@ main(int argc, char **argv)
 				usage();
 			continue;
 		}
-		if (isdigit((unsigned char)arg[0])) {
+		if (isdigit((int)arg[0])) {
 			if (arg[1] != '\0')
 				errx(EXIT_FAILURE,
-				     "%s: invalid increment", arg);
+				     "%s: invalid increament", arg);
 			inc = arg[0] - '0';
 			continue;
 		}
@@ -154,10 +150,9 @@ main(int argc, char **argv)
 			errx(EXIT_FAILURE,
 			     "too many tab stops (max %d)", NSTOPS);
 		errno = 0;
-		num = strtol(token, &end, 10);
-		if (errno != 0 || *end != '\0' || num <= 0 || num > INT_MAX)
+		n = strtol(token, &end, 10);
+		if (errno != 0 || *end != '\0' || n <= 0)
 			errx(EXIT_FAILURE, "%s: invalid tab stop", token);
-		n = (int)num;
 		if (*token == '+') {
 			if (nstops == 0)
 				errx(EXIT_FAILURE,
@@ -205,10 +200,9 @@ main(int argc, char **argv)
 		term = getenv("COLUMNS");
 		if (term != NULL) {
 			errno = 0;
-			num = strtol(term, &end, 10);
-			if (errno == 0 && *end == '\0' &&
-			    0 <= cols && cols <= INT_MAX)
-				cols = (int)num;
+			cols = strtol(term, &end, 10);
+			if (errno != 0 || *end != '\0' || cols < 0)
+				cols = 0;
 		}
 		if (cols == 0) {
 			if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0)

@@ -1,4 +1,4 @@
-/*   $NetBSD: addwstr.c,v 1.8 2021/09/06 07:45:48 rin Exp $ */
+/*   $NetBSD: addwstr.c,v 1.6 2019/06/09 07:40:14 blymn Exp $ */
 
 /*
  * Copyright (c) 2005 The NetBSD Foundation Inc.
@@ -141,7 +141,9 @@ waddnwstr(WINDOW *win, const wchar_t *s, int n)
 		for (p = s, len = 0; n-- && *p++; ++len);
 	else
 		len = wcslen(s);
-	__CTRACE(__CTRACE_INPUT, "waddnwstr: string len=%zu\n", len);
+#ifdef DEBUG
+	__CTRACE(__CTRACE_INPUT, "waddnwstr: string len=%ld\n", (long) len);
+#endif /* DEBUG */
 
 	p = s;
 	while (len) {
@@ -151,8 +153,10 @@ waddnwstr(WINDOW *win, const wchar_t *s, int n)
 			return ERR;
 		if (wadd_wch( win, &cc ) == ERR)
 			return ERR;
+#ifdef DEBUG
 		__CTRACE(__CTRACE_INPUT, "waddnwstr: (%x,%x,%d) added\n",
-		    cc.vals[0], cc.attributes, cc.elements);
+			 cc.vals[ 0 ], cc.attributes, cc.elements );
+#endif /* DEBUG */
 		p++, len--;
 	}
 

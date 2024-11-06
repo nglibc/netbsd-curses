@@ -1,4 +1,4 @@
-/*	$NetBSD: internals.c,v 1.42 2021/10/25 06:25:18 blymn Exp $	*/
+/*	$NetBSD: internals.c,v 1.40 2021/04/13 13:13:04 christos Exp $	*/
 
 /*-
  * Copyright (c) 1998-1999 Brett Lymn
@@ -1603,6 +1603,11 @@ _formi_redraw_field(FORM *form, int field)
 			}
 		}
 
+		if (form->cur_field == field)
+			wattrset(form->scrwin, cur->fore);
+		else
+			wattrset(form->scrwin, cur->back);
+
 		str = &row->string[cur->start_char];
 
 #ifdef DEBUG
@@ -1623,14 +1628,11 @@ _formi_redraw_field(FORM *form, int field)
 		_formi_dbg_printf("%s: %s\n", __func__,  buffer);
 #endif
 
-		wattrset(form->scrwin, cur->back);
-
 		for (i = start + cur->start_char; i < pre; i++)
 			waddch(form->scrwin, cur->pad);
 
 		_formi_dbg_printf("%s: will add %d chars\n", __func__,
 			min(slen, flen));
-		wattrset(form->scrwin, cur->fore);
 		for (i = 0, cpos = cur->start_char; i < min(slen, flen);
 		     i++, str++, cpos++) 
 		{
@@ -1642,11 +1644,8 @@ _formi_redraw_field(FORM *form, int field)
 				if (c == '\t')
 					tab = add_tab(form, row, cpos,
 						      cur->pad);
-				else {
-					wattrset(form->scrwin, cur->back);
+				else
 					waddch(form->scrwin, cur->pad);
-					wattrset(form->scrwin, cur->fore);
-				}
 			} else if ((cur->opts & O_VISIBLE) == O_VISIBLE) {
 				if (c == '\t')
 					tab = add_tab(form, row, cpos, ' ');
@@ -1668,7 +1667,6 @@ _formi_redraw_field(FORM *form, int field)
 				i += tab - 1;
 		}
 
-		wattrset(form->scrwin, cur->back);
 		for (i = 0; i < post; i++)
 			waddch(form->scrwin, cur->pad);
 	}
@@ -1677,7 +1675,10 @@ _formi_redraw_field(FORM *form, int field)
 		wmove(form->scrwin, (int) (cur->form_row + i),
 		      (int) cur->form_col);
 
-		wattrset(form->scrwin, cur->back);
+		if (form->cur_field == field)
+			wattrset(form->scrwin, cur->fore);
+		else
+			wattrset(form->scrwin, cur->back);
 
 		for (j = 0; j < cur->cols; j++) {
 			waddch(form->scrwin, cur->pad);
@@ -1685,12 +1686,6 @@ _formi_redraw_field(FORM *form, int field)
 	}
 
 	wattrset(form->scrwin, cur->back);
-
-	cur = form->fields[form->cur_field];
-	wmove(form->scrwin, cur->form_row + cur->cursor_ypos,
-	    cur->form_col + cur->cursor_xpos);
-	wcursyncup(form->scrwin);
-
 	return;
 }
 

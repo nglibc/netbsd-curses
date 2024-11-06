@@ -1,4 +1,4 @@
-/*	$NetBSD: curs_set.c,v 1.12 2021/09/06 07:45:48 rin Exp $	*/
+/*	$NetBSD: curs_set.c,v 1.10 2011/03/30 09:47:02 blymn Exp $	*/
 
 /*-
  * Copyright (c) 1998-2000 Brett Lymn
@@ -48,8 +48,10 @@ curs_set(int visibility)
 	switch (visibility) {
 		case 0: /* invisible */
 			if (cursor_invisible != NULL) {
+#ifdef DEBUG
 				__CTRACE(__CTRACE_MISC,
 				    "curs_set: invisible\n");
+#endif
 				_cursesi_screen->old_mode = 0;
 				tputs(cursor_invisible, 0, __cputchar);
 				fflush(_cursesi_screen->outfd);
@@ -59,7 +61,9 @@ curs_set(int visibility)
 
 		case 1: /* normal */
 			if (cursor_normal != NULL) {
+#ifdef DEBUG
 				__CTRACE(__CTRACE_MISC, "curs_set: normal\n");
+#endif
 				_cursesi_screen->old_mode = 1;
 				tputs(cursor_normal, 0, __cputchar);
 				fflush(_cursesi_screen->outfd);
@@ -69,7 +73,10 @@ curs_set(int visibility)
 
 		case 2: /* high visibility */
 			if (cursor_visible != NULL) {
-				__CTRACE(__CTRACE_MISC, "curs_set: high vis\n");
+#ifdef DEBUG
+				__CTRACE(__CTRACE_MISC,
+				    "curs_set: high vis\n");
+#endif
 				_cursesi_screen->old_mode = 2;
 				tputs(cursor_visible, 0, __cputchar);
 				fflush(_cursesi_screen->outfd);

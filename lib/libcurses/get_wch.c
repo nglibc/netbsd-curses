@@ -1,4 +1,4 @@
-/*   $NetBSD: get_wch.c,v 1.26 2021/09/06 07:45:48 rin Exp $ */
+/*   $NetBSD: get_wch.c,v 1.24 2020/07/06 23:33:38 uwe Exp $ */
 
 /*
  * Copyright (c) 2005 The NetBSD Foundation Inc.
@@ -82,7 +82,9 @@ inkey(wchar_t *wc, int to, int delay)
 				*end = &_cursesi_screen->cbuf_tail;
 	char		*inbuf = &_cursesi_screen->cbuf[ 0 ];
 
+#ifdef DEBUG
 	__CTRACE(__CTRACE_INPUT, "inkey (%p, %d, %d)\n", (void *)wc, to, delay);
+#endif
 	for (;;) { /* loop until we get a complete key sequence */
 		if (wstate == INKEY_NORM) {
 			if (delay && __timeout(delay) == ERR)
@@ -97,26 +99,32 @@ inkey(wchar_t *wc, int to, int delay)
 				return ERR;
 
 			k = (wchar_t)c;
+#ifdef DEBUG
 			__CTRACE(__CTRACE_INPUT,
 			    "inkey (wstate normal) got '%s'\n", unctrl(k));
+#endif
 
 			inbuf[*end] = k;
 			*end = (*end + 1) % MAX_CBUF_SIZE;
 			*working = *start;
 			wstate = INKEY_ASSEMBLING; /* go to assembling state */
+#ifdef DEBUG
 			__CTRACE(__CTRACE_INPUT,
 			    "inkey: NORM=>ASSEMBLING: start(%d), "
 			    "current(%d), end(%d)\n", *start, *working, *end);
+#endif /* DEBUG */
 		} else if (wstate == INKEY_BACKOUT) {
 			k = inbuf[*working];
 			*working = (*working + 1) % MAX_CBUF_SIZE;
 			if (*working == *end) {	/* see if run out of keys */
 				/* if so, switch to assembling */
 				wstate = INKEY_ASSEMBLING;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: BACKOUT=>ASSEMBLING, start(%d), "
 				    "current(%d), end(%d)\n",
 				    *start, *working, *end);
+#endif /* DEBUG */
 			}
 		} else if (wstate == INKEY_ASSEMBLING) {
 			/* assembling a key sequence */
@@ -139,8 +147,10 @@ inkey(wchar_t *wc, int to, int delay)
 				return ERR;
 
 			k = (wchar_t)c;
+#ifdef DEBUG
 			__CTRACE(__CTRACE_INPUT,
 			    "inkey (wstate assembling) got '%s'\n", unctrl(k));
+#endif /* DEBUG */
 			if (feof(infd)) { /* inter-char T/O, start backout */
 				clearerr(infd);
 				if (*start == *end)
@@ -149,18 +159,22 @@ inkey(wchar_t *wc, int to, int delay)
 
 				k = inbuf[*start];
 				wstate = INKEY_TIMEOUT;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: ASSEMBLING=>TIMEOUT, start(%d), "
 				    "current(%d), end(%d)\n",
 				    *start, *working, *end);
+#endif /* DEBUG */
 			} else {
 				inbuf[*end] = k;
 				*working = *end;
 				*end = (*end + 1) % MAX_CBUF_SIZE;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: ASSEMBLING: start(%d), "
 				    "current(%d), end(%d)",
 				    *start, *working, *end);
+#endif /* DEBUG */
 			}
 		} else if (wstate == INKEY_WCASSEMBLING) {
 			/* assembling a wide-char sequence */
@@ -183,9 +197,11 @@ inkey(wchar_t *wc, int to, int delay)
 				return ERR;
 
 			k = (wchar_t)c;
+#ifdef DEBUG
 			__CTRACE(__CTRACE_INPUT,
 			    "inkey (wstate wcassembling) got '%s'\n",
-			    unctrl(k));
+				unctrl(k));
+#endif
 			if (feof(infd)) { /* inter-char T/O, start backout */
 				clearerr(infd);
 				if (*start == *end)
@@ -196,16 +212,20 @@ inkey(wchar_t *wc, int to, int delay)
 				*working = *start = (*start +1) % MAX_CBUF_SIZE;
 				if (*start == *end) {
 					_cursesi_state = wstate = INKEY_NORM;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "inkey: WCASSEMBLING=>NORM, "
 					    "start(%d), current(%d), end(%d)",
 					    *start, *working, *end);
+#endif /* DEBUG */
 				} else {
 					_cursesi_state = wstate = INKEY_BACKOUT;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "inkey: WCASSEMBLING=>BACKOUT, "
 					    "start(%d), current(%d), end(%d)",
 					    *start, *working, *end);
+#endif /* DEBUG */
 				}
 				return OK;
 			} else {
@@ -213,15 +233,19 @@ inkey(wchar_t *wc, int to, int delay)
 				inbuf[*end] = k;
 				*working = *end;
 				*end = (*end + 1) % MAX_CBUF_SIZE;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: WCASSEMBLING[head(%d), "
 				    "urrent(%d), tail(%d)]\n",
 				    *start, *working, *end);
+#endif /* DEBUG */
 				ret = (int)mbrtowc(wc, inbuf + (*working), 1,
 						   &_cursesi_screen->sp);
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: mbrtowc returns %d, wc(%x)\n",
 				    ret, *wc);
+#endif /* DEBUG */
 				if (ret == -2) {
 					*working = (*working+1) % MAX_CBUF_SIZE;
 					continue;
@@ -231,39 +255,46 @@ inkey(wchar_t *wc, int to, int delay)
 				if ( ret == -1 ) {
 					/* return the 1st character we know */
 					*wc = inbuf[*start];
-					*working = *start =
-					    (*start + 1) % MAX_CBUF_SIZE;
+					*working = *start = (*start + 1) % MAX_CBUF_SIZE;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "inkey: Invalid wide char(%x) "
 					    "[head(%d), current(%d), "
 					    "tail(%d)]\n",
 					    *wc, *start, *working, *end);
+#endif /* DEBUG */
 				} else { /* > 0 */
 					/* return the wide character */
-					*start = *working =
-					    (*working + ret) % MAX_CBUF_SIZE;
+					*start = *working
+					       = (*working + ret)%MAX_CBUF_SIZE;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "inkey: Wide char found(%x) "
 					    "[head(%d), current(%d), "
 					    "tail(%d)]\n",
 					    *wc, *start, *working, *end);
+#endif /* DEBUG */
 				}
 
 				if (*start == *end) {
 					/* only one char processed */
 					_cursesi_state = wstate = INKEY_NORM;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "inkey: WCASSEMBLING=>NORM, "
 					    "start(%d), current(%d), end(%d)",
 					    *start, *working, *end);
+#endif /* DEBUG */
 				} else {
 					/* otherwise we must have more than
 					 * one char to backout */
 					_cursesi_state = wstate = INKEY_BACKOUT;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "inkey: WCASSEMBLING=>BACKOUT, "
 					    "start(%d), current(%d), end(%d)",
 					    *start, *working, *end);
+#endif /* DEBUG */
 				}
 				return OK;
 			}
@@ -283,22 +314,28 @@ inkey(wchar_t *wc, int to, int delay)
 				&& (current->key[mapping]->enable == FALSE)))
 		{
 			/* wide-character specific code */
+#ifdef DEBUG
 			__CTRACE(__CTRACE_INPUT,
 			    "inkey: Checking for wide char\n");
-			mbrtowc(NULL, NULL, 1, &_cursesi_screen->sp);
+#endif /* DEBUG */
+			mbrtowc( NULL, NULL, 1, &_cursesi_screen->sp );
 			*working = *start;
 			mlen = *end > *working ?
 				*end - *working : MAX_CBUF_SIZE - *working;
 			if (!mlen)
 				return ERR;
+#ifdef DEBUG
 			__CTRACE(__CTRACE_INPUT,
 			    "inkey: Check wide char[head(%d), "
-			    "current(%d), tail(%d), mlen(%zu)]\n",
-			    *start, *working, *end, mlen);
+			    "current(%d), tail(%d), mlen(%ld)]\n",
+			    *start, *working, *end, (long) mlen);
+#endif /* DEBUG */
 			ret = (int)mbrtowc(wc, inbuf + (*working), mlen,
 			                   &_cursesi_screen->sp);
+#ifdef DEBUG
 			__CTRACE(__CTRACE_INPUT,
 			    "inkey: mbrtowc returns %d, wc(%x)\n", ret, *wc);
+#endif /* DEBUG */
 			if (ret == -2 && *end < *working) {
 				/* second half of a wide character */
 				*working = 0;
@@ -308,8 +345,8 @@ inkey(wchar_t *wc, int to, int delay)
 							  &_cursesi_screen->sp);
 			}
 			if (ret == -2 && wstate != INKEY_TIMEOUT) {
-				*working =
-				    (*working + (int) mlen) % MAX_CBUF_SIZE;
+				*working = (*working + (int) mlen)
+					% MAX_CBUF_SIZE;
 				wstate = INKEY_WCASSEMBLING;
 				continue;
 			}
@@ -318,36 +355,44 @@ inkey(wchar_t *wc, int to, int delay)
 			if (ret == -1) {
 				/* return the first key we know about */
 				*wc = inbuf[*start];
-				*working = *start =
-				    (*start + 1) % MAX_CBUF_SIZE;
+				*working = *start
+					= (*start + 1) % MAX_CBUF_SIZE;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: Invalid wide char(%x)[head(%d), "
 				    "current(%d), tail(%d)]\n",
 				    *wc, *start, *working, *end);
+#endif /* DEBUG */
 			} else { /* > 0 */
 				/* return the wide character */
-				*start = *working =
-				    (*working + ret) % MAX_CBUF_SIZE;
+				*start = *working
+					= (*working + ret) % MAX_CBUF_SIZE;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: Wide char found(%x)[head(%d), "
 				    "current(%d), tail(%d)]\n",
 				    *wc, *start, *working, *end);
+#endif /* DEBUG */
 			}
 
 			if (*start == *end) {	/* only one char processed */
 				_cursesi_state = wstate = INKEY_NORM;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: Empty cbuf=>NORM, "
 				    "start(%d), current(%d), end(%d)\n",
 				    *start, *working, *end);
+#endif /* DEBUG */
 			} else {
 				/* otherwise we must have more than one
 				 * char to backout */
 				_cursesi_state = wstate = INKEY_BACKOUT;
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: Non-empty cbuf=>BACKOUT, "
 				    "start(%d), current(%d), end(%d)\n",
 				    *start, *working, *end);
+#endif /* DEBUG */
 			}
 			return OK;
 		} else {	/* must be part of a multikey sequence */
@@ -355,27 +400,33 @@ inkey(wchar_t *wc, int to, int delay)
 			if (current->key[current->mapping[k]]->type
 					== KEYMAP_LEAF) {
 				/* eat the key sequence in cbuf */
-				*start = *working =
-				    (*working + 1) % MAX_CBUF_SIZE;
+				*start = *working = ( *working + 1 )
+				    % MAX_CBUF_SIZE;
 
 				/* check if inbuf empty now */
+#ifdef DEBUG
 				__CTRACE(__CTRACE_INPUT,
 				    "inkey: Key found(%s)\n",
 				    key_name(current->key[mapping]->value.symbol));
+#endif /* DEBUG */
 				if (*start == *end) {
 					/* if it is go back to normal */
 					_cursesi_state = wstate = INKEY_NORM;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "[inkey]=>NORM, start(%d), "
 					    "current(%d), end(%d)",
 					    *start, *working, *end);
+#endif /* DEBUG */
 				} else {
 					/* otherwise go to backout state */
 					_cursesi_state = wstate = INKEY_BACKOUT;
+#ifdef DEBUG
 					__CTRACE(__CTRACE_INPUT,
 					    "[inkey]=>BACKOUT, start(%d), "
 					    "current(%d), end(%d)",
-					    *start, *working, *end);
+					    *start, *working, *end );
+#endif /* DEBUG */
 				}
 
 				/* return the symbol */
@@ -445,9 +496,11 @@ wget_wch(WINDOW *win, wint_t *ch)
 
 	if (!(win->flags & __ISPAD) && is_wintouched(win))
 		wrefresh(win);
+#ifdef DEBUG
 	__CTRACE(__CTRACE_INPUT, "wget_wch: __echoit = %d, "
 	    "__rawmode = %d, __nl = %d, flags = %#.4x\n",
 	    __echoit, __rawmode, _cursesi_screen->nl, win->flags);
+#endif
 	if (_cursesi_screen->resized) {
 		resizeterm(LINES, COLS);
 		_cursesi_screen->resized = 0;
@@ -455,8 +508,10 @@ wget_wch(WINDOW *win, wint_t *ch)
 		return KEY_CODE_YES;
 	}
 	if (_cursesi_screen->unget_pos) {
+#ifdef DEBUG
 		__CTRACE(__CTRACE_INPUT, "wget_wch returning char at %d\n",
 		    _cursesi_screen->unget_pos);
+#endif
 		_cursesi_screen->unget_pos--;
 		*ch = _cursesi_screen->unget_list[_cursesi_screen->unget_pos];
 		if (__echoit) {
@@ -596,7 +651,9 @@ __fgetwc_resize(FILE *infd, bool *resized)
 
 	if (!ferror(infd) || errno != EINTR || !_cursesi_screen->resized)
 		return ERR;
+#ifdef DEBUG
 	__CTRACE(__CTRACE_INPUT, "__fgetwc_resize returning KEY_RESIZE\n");
+#endif
 	resizeterm(LINES, COLS);
 	_cursesi_screen->resized = 0;
 	*resized = true;
